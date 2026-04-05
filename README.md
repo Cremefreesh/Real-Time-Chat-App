@@ -48,10 +48,11 @@ Auth Middleware+Logging Middleware
         ↓
 Business Logic Layer
         ↓
- PostgreSQL (data)+Redis (cache/pubsub)  
+PostgreSQL (data)+Redis (cache/pubsub)  
         ↓
 WebSocket Layer (real-time)
         ↓
-Optional Workers (Celery)
+Workers (Celery)
 
 
+I built a real-time chat system using React and FastAPI with WebSockets, scaled using Redis pub/sub, implemented JWT authentication, background workers with Celery, and deployed it with Docker and CI/CD.
