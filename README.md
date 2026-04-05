@@ -40,17 +40,13 @@ Frontend (React + TS)
         ↓
 API Gateway (FastAPI)
         ↓
--------------------------
-| Auth Middleware       |
-| Logging Middleware    |
--------------------------
+Auth Middleware     
+Logging Middleware   
         ↓
 Business Logic Layer
         ↓
--------------------------
-| PostgreSQL (data)     |
-| Redis (cache/pubsub)  |
--------------------------
+ PostgreSQL (data)  
+ Redis (cache/pubsub)  
         ↓
 WebSocket Layer (real-time)
         ↓
