@@ -5,6 +5,10 @@ Backend - Python + FastAPI:
       WebSocket connections (real-time messaging)
       Business logic
 
+Frontend - React + Typescript:
+      Drag and Drop functionality
+      Real time updating
+
 Database - PostgreSQL:
       Users
       Messages
