@@ -17,3 +17,22 @@ Middlewear:
       Rate limiting (prevent spam)
       Error handling layer  
         
+Real-time Layer:
+      WebSockets (FastAPI or Socket.IO)
+      Redis (for scaling messages across servers)
+
+Servers and Deployment:
+      Docker (containerize backend + frontend)
+      Deployment (AWS / Render / Fly.io)
+      Nginx (reverse proxy)
+      CI/CD (GitHub Actions)
+      Environment configs
+
+Other - Celeryu + Redis:
+      Sending notifications
+      Processing uploads
+      Cleaning old data
+
+
+
+
