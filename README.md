@@ -1,4 +1,4 @@
-# Real-Time-Chat-App
+# Real-Time-Chat-App --> A productivity app with AI-assisted prioritization and collaboration.
 
 Backend - Python + FastAPI:
       REST API (login, users, chat history)
@@ -34,5 +34,26 @@ Other - Celeryu + Redis:
       Cleaning old data
 
 
+Overview:
+
+Frontend (React + TS)
+        ↓
+API Gateway (FastAPI)
+        ↓
+-------------------------
+| Auth Middleware       |
+| Logging Middleware    |
+-------------------------
+        ↓
+Business Logic Layer
+        ↓
+-------------------------
+| PostgreSQL (data)     |
+| Redis (cache/pubsub)  |
+-------------------------
+        ↓
+WebSocket Layer (real-time)
+        ↓
+Optional Workers (Celery)
 
 
