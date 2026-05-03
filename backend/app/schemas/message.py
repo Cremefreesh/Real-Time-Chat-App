@@ -4,7 +4,7 @@ from app.schemas.user import UserCreate
 from app.core.security import hash_password
 
 def create_user(db: Session, user: UserCreate):
-    hashed_pw = hash_password(user.password)
+    hashed_password = pwd_context.hash(user.password[:72])
 
     db_user = User(
         email=user.email,
