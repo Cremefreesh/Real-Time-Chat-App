@@ -10,6 +10,7 @@ def get_password_hash(password: str):
 
 def create_user(db: Session, user: UserCreate):
     db_user = User(
+        username=user.username,
         email=user.email,
         hashed_password=get_password_hash(user.password),
     )
