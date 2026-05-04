@@ -1,7 +1,7 @@
 # backend/app/api/routes/auth.py
 from fastapi import APIRouter
 
-router = APIRouter()  # ✅ make sure this line exists
+router = APIRouter()  
 
 @router.get("/ping")
 def ping():
@@ -66,4 +66,14 @@ def login(user: UserLogin, db: Session = Depends(get_db)):
     return {
         "access_token": token,
         "token_type": "bearer"
+    }
+
+from app.core.dependencies import get_current_user
+from app.models.user import User
+
+@router.get("/me")
+def get_me(current_user: User = Depends(get_current_user)):
+    return {
+        "email": current_user.email,
+        "username": current_user.username
     }
