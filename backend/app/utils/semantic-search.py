@@ -25,3 +25,6 @@ def semantic_search(query, messages, top_k=5):
     )
 
     return results[:top_k]
+
+
+    #still need to implement into rest of the files but do later

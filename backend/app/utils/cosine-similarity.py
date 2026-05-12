@@ -10,3 +10,4 @@ def cosine_similarity(a, b):
 
 
 #add scikit later if decide to flesh out further
+#still need to implement into rest of the files but do later

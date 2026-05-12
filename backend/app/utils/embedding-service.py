@@ -3,3 +3,4 @@
 #This doc will convert the words being sent into vectors 
 #Then we can add the phrase and its vectors into the database at once POST..(phrase,vectors)
 
+#still need to implement into rest of the files but do later
