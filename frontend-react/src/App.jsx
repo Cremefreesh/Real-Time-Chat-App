@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const API = "http://127.0.0.1:8001";
 
 function App() {
-  const [token, setToken] = useState(null);
+  const [token, setToken] = useState(localStorage.getItem("token"));
   const [output, setOutput] = useState("");
+  const [currentUser, setCurrentUser] = useState(null);
 
   const [registerData, setRegisterData] = useState({
     username: "",
@@ -17,6 +18,7 @@ function App() {
     password: "",
   });
 
+  
   const register = async () => {
     const res = await fetch(`${API}/auth/register`, {
       method: "POST",
@@ -37,6 +39,7 @@ function App() {
 
     const data = await res.json();
     setToken(data.access_token);
+    localStorage.setItem("token", data.access_token);
     setOutput(JSON.stringify(data, null, 2));
   };
 
@@ -47,13 +50,34 @@ function App() {
       },
     });
 
-    const data = await res.json();
-    setOutput(JSON.stringify(data, null, 2));
+  const data = await res.json();
+
+  setCurrentUser(data);
+  setOutput(JSON.stringify(data, null, 2));
   };
+
+  const logout = () => {
+    localStorage.removeItem("token");
+    setToken(null);
+    setCurrentUser(null);
+  };
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (token) {
+        await getMe();
+      }
+    };
+  fetchUser();
+  }, [token]);
+
 
   return (
     <div style={{ padding: "20px" }}>
+  {!token ? (
+    <>
       <h2>Register</h2>
+
       <input
         placeholder="Username"
         onChange={(e) =>
@@ -61,6 +85,7 @@ function App() {
         }
       />
       <br />
+
       <input
         placeholder="Email"
         onChange={(e) =>
@@ -68,6 +93,7 @@ function App() {
         }
       />
       <br />
+
       <input
         type="password"
         placeholder="Password"
@@ -76,11 +102,13 @@ function App() {
         }
       />
       <br />
+
       <button onClick={register}>Register</button>
 
       <hr />
 
       <h2>Login</h2>
+
       <input
         placeholder="Email"
         onChange={(e) =>
@@ -88,6 +116,7 @@ function App() {
         }
       />
       <br />
+
       <input
         type="password"
         placeholder="Password"
@@ -96,16 +125,32 @@ function App() {
         }
       />
       <br />
+
       <button onClick={login}>Login</button>
+    </>
+  ) : (
+    <>
+      <h1>Welcome!</h1>
 
-      <hr />
+      <p>You are logged in.</p>
 
-      <h2>Profile</h2>
-      <button onClick={getMe}>Get Me</button>
+      {currentUser && (
+        <>
+          <p>Email: {currentUser.email}</p>
+          <p>Username: {currentUser.username}</p>
+        </>
+      )}
 
-      <pre>{output}</pre>
-    </div>
+      <button onClick={logout}>Logout</button>
+    </>
+  )}
+
+  <hr />
+
+  <pre>{output}</pre>
+</div>
   );
 }
+//may need some indentation reshuffling if wrong
 
 export default App;
