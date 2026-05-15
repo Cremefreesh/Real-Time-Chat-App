@@ -1,10 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 
 const API = "http://127.0.0.1:8001";
 
 function App() {
   const [token, setToken] = useState(localStorage.getItem("token"));
-  const [output, setOutput] = useState("");
   const [currentUser, setCurrentUser] = useState(null);
 
   const [registerData, setRegisterData] = useState({
@@ -18,42 +17,46 @@ function App() {
     password: "",
   });
 
-  
-  const register = async () => {
-    const res = await fetch(`${API}/auth/register`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(registerData),
-    });
-
-    const data = await res.json();
-    setOutput(JSON.stringify(data, null, 2));
-  };
-
-  const login = async () => {
-    const res = await fetch(`${API}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(loginData),
-    });
-
-    const data = await res.json();
-    setToken(data.access_token);
-    localStorage.setItem("token", data.access_token);
-    setOutput(JSON.stringify(data, null, 2));
-  };
-
-  const getMe = async () => {
+  const getMe = useCallback(async () => {
     const res = await fetch(`${API}/auth/me`, {
       headers: {
         Authorization: `Bearer ${token}`,
       },
     });
 
-  const data = await res.json();
+    const data = await res.json();
+    setCurrentUser(data);
+  }, [token]);
 
-  setCurrentUser(data);
-  setOutput(JSON.stringify(data, null, 2));
+  useEffect(() => {
+    if (token) {
+      getMe();
+    }
+  }, [token, getMe]);
+
+  const register = async () => {
+    await fetch(`${API}/auth/register`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(registerData),
+    });
+  };
+
+  const login = async () => {
+    const res = await fetch(`${API}/auth/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(loginData),
+    });
+
+    const data = await res.json();
+
+    localStorage.setItem("token", data.access_token);
+    setToken(data.access_token);
   };
 
   const logout = () => {
@@ -62,95 +65,136 @@ function App() {
     setCurrentUser(null);
   };
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (token) {
-        await getMe();
-      }
-    };
-  fetchUser();
-  }, [token]);
+  if (!token) {
+    return (
+      <div className="h-screen bg-zinc-900 flex items-center justify-center text-white">
+        <div className="bg-zinc-800 p-8 rounded-2xl w-96">
+          <h1 className="text-3xl font-bold mb-6">Chat App</h1>
 
+          <input
+            className="w-full p-2 mb-3 rounded bg-zinc-700"
+            placeholder="Email"
+            onChange={(e) =>
+              setLoginData({ ...loginData, email: e.target.value })
+            }
+          />
+
+          <input
+            className="w-full p-2 mb-3 rounded bg-zinc-700"
+            type="password"
+            placeholder="Password"
+            onChange={(e) =>
+              setLoginData({ ...loginData, password: e.target.value })
+            }
+          />
+
+          <button
+            className="w-full bg-blue-600 p-2 rounded hover:bg-blue-500"
+            onClick={login}
+          >
+            Login
+          </button>
+
+          <hr className="my-6 border-zinc-600" />
+
+          <h2 className="text-xl mb-3">Register</h2>
+
+          <input
+            className="w-full p-2 mb-3 rounded bg-zinc-700"
+            placeholder="Username"
+            onChange={(e) =>
+              setRegisterData({
+                ...registerData,
+                username: e.target.value,
+              })
+            }
+          />
+
+          <input
+            className="w-full p-2 mb-3 rounded bg-zinc-700"
+            placeholder="Email"
+            onChange={(e) =>
+              setRegisterData({
+                ...registerData,
+                email: e.target.value,
+              })
+            }
+          />
+
+          <input
+            className="w-full p-2 mb-3 rounded bg-zinc-700"
+            type="password"
+            placeholder="Password"
+            onChange={(e) =>
+              setRegisterData({
+                ...registerData,
+                password: e.target.value,
+              })
+            }
+          />
+
+          <button
+            className="w-full bg-green-600 p-2 rounded hover:bg-green-500"
+            onClick={register}
+          >
+            Register
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ padding: "20px" }}>
-  {!token ? (
-    <>
-      <h2>Register</h2>
+    <div className="h-screen bg-zinc-900 text-white flex">
+      {/* Sidebar */}
+      <div className="w-64 bg-zinc-800 p-4 flex flex-col">
+        <h1 className="text-2xl font-bold mb-6">Chat App</h1>
 
-      <input
-        placeholder="Username"
-        onChange={(e) =>
-          setRegisterData({ ...registerData, username: e.target.value })
-        }
-      />
-      <br />
+        <div className="mb-4">
+          <p className="text-sm text-zinc-400">Logged in as:</p>
+          <p>{currentUser?.username}</p>
+        </div>
 
-      <input
-        placeholder="Email"
-        onChange={(e) =>
-          setRegisterData({ ...registerData, email: e.target.value })
-        }
-      />
-      <br />
+        <button
+          className="bg-red-600 p-2 rounded hover:bg-red-500 mt-auto"
+          onClick={logout}
+        >
+          Logout
+        </button>
+      </div>
 
-      <input
-        type="password"
-        placeholder="Password"
-        onChange={(e) =>
-          setRegisterData({ ...registerData, password: e.target.value })
-        }
-      />
-      <br />
+      {/* Chat Area */}
+      <div className="flex-1 flex flex-col">
+        {/* Header */}
+        <div className="bg-zinc-800 p-4 border-b border-zinc-700">
+          <h2 className="text-xl font-semibold">General Chat</h2>
+        </div>
 
-      <button onClick={register}>Register</button>
+        {/* Messages */}
+        <div className="flex-1 p-4 overflow-y-auto space-y-4">
+          <div className="bg-zinc-800 p-3 rounded-xl w-fit">
+            Hello 👋
+          </div>
 
-      <hr />
+          <div className="bg-blue-600 p-3 rounded-xl w-fit ml-auto">
+            Hi there!
+          </div>
+        </div>
 
-      <h2>Login</h2>
+        {/* Input */}
+        <div className="p-4 border-t border-zinc-700 flex gap-2">
+          <input
+            className="flex-1 p-3 rounded-xl bg-zinc-800"
+            placeholder="Type a message..."
+          />
 
-      <input
-        placeholder="Email"
-        onChange={(e) =>
-          setLoginData({ ...loginData, email: e.target.value })
-        }
-      />
-      <br />
-
-      <input
-        type="password"
-        placeholder="Password"
-        onChange={(e) =>
-          setLoginData({ ...loginData, password: e.target.value })
-        }
-      />
-      <br />
-
-      <button onClick={login}>Login</button>
-    </>
-  ) : (
-    <>
-      <h1>Welcome!</h1>
-
-      <p>You are logged in.</p>
-
-      {currentUser && (
-        <>
-          <p>Email: {currentUser.email}</p>
-          <p>Username: {currentUser.username}</p>
-        </>
-      )}
-
-      <button onClick={logout}>Logout</button>
-    </>
-  )}
-
-  <hr />
-
-  <pre>{output}</pre>
-</div>
+          <button className="bg-blue-600 px-6 rounded-xl hover:bg-blue-500">
+            Send
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
-//may need some indentation reshuffling if wrong
 
 export default App;
