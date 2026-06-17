@@ -1,9 +1,22 @@
 from fastapi import FastAPI
-from app.api.routes import auth
+from fastapi.middleware.cors import CORSMiddleware
+
+from app.api.routes import auth, chat, ws
 
 app = FastAPI()
 
-app.include_router(auth.router, prefix="/auth")
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+app.include_router(auth.router, prefix="/auth", tags=["auth"])
+app.include_router(chat.router, prefix="/chat", tags=["chat"])
+app.include_router(ws.router, tags=["websocket"])
+
 
 @app.get("/")
 def root():
