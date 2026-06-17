@@ -1,198 +1,186 @@
-import { useState, useEffect, useCallback } from "react";
-
-const API = "http://127.0.0.1:8001";
+import { useEffect, useState } from "react";
+import { login, signup, getRooms, createRoom, getMessages } from "./api";
 
 function App() {
-  const [token, setToken] = useState(localStorage.getItem("token"));
-  const [currentUser, setCurrentUser] = useState(null);
+  const [mode, setMode] = useState("login");
+  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
 
-  const [registerData, setRegisterData] = useState({
-    username: "",
-    email: "",
-    password: "",
-  });
+  const [rooms, setRooms] = useState([]);
+  const [roomName, setRoomName] = useState("");
+  const [activeRoom, setActiveRoom] = useState(null);
 
-  const [loginData, setLoginData] = useState({
-    email: "",
-    password: "",
-  });
+  const [messages, setMessages] = useState([]);
+  const [messageInput, setMessageInput] = useState("");
+  const [socket, setSocket] = useState(null);
 
-  const getMe = useCallback(async () => {
-    const res = await fetch(`${API}/auth/me`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
+  const token = localStorage.getItem("token");
 
-    const data = await res.json();
-    setCurrentUser(data);
-  }, [token]);
+  async function handleAuth(e) {
+    e.preventDefault();
+
+    if (mode === "signup") {
+      await signup(username, email, password);
+      setMode("login");
+      return;
+    }
+
+    await login(email, password);
+    loadRooms();
+  }
+
+  async function loadRooms() {
+    const data = await getRooms();
+    setRooms(data);
+  }
+
+  async function handleCreateRoom(e) {
+    e.preventDefault();
+
+    await createRoom(roomName);
+    setRoomName("");
+    loadRooms();
+  }
+
+  async function openRoom(room) {
+    setActiveRoom(room);
+
+    const oldMessages = await getMessages(room.id);
+    setMessages(oldMessages);
+
+    if (socket) {
+      socket.close();
+    }
+
+    const token = localStorage.getItem("token");
+    const ws = new WebSocket(
+      `ws://127.0.0.1:8000/ws/rooms/${room.id}?token=${token}`
+    );
+
+    ws.onmessage = (event) => {
+      const newMessage = JSON.parse(event.data);
+      setMessages((prev) => [...prev, newMessage]);
+    };
+
+    setSocket(ws);
+  }
+
+  function sendMessage(e) {
+    e.preventDefault();
+
+    if (!socket || !messageInput.trim()) return;
+
+    socket.send(
+      JSON.stringify({
+        content: messageInput,
+      })
+    );
+
+    setMessageInput("");
+  }
 
   useEffect(() => {
     if (token) {
-      getMe();
+      loadRooms();
     }
-  }, [token, getMe]);
-
-  const register = async () => {
-    await fetch(`${API}/auth/register`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(registerData),
-    });
-  };
-
-  const login = async () => {
-    const res = await fetch(`${API}/auth/login`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(loginData),
-    });
-
-    const data = await res.json();
-
-    localStorage.setItem("token", data.access_token);
-    setToken(data.access_token);
-  };
-
-  const logout = () => {
-    localStorage.removeItem("token");
-    setToken(null);
-    setCurrentUser(null);
-  };
+  }, []);
 
   if (!token) {
     return (
-      <div className="h-screen bg-zinc-900 flex items-center justify-center text-white">
-        <div className="bg-zinc-800 p-8 rounded-2xl w-96">
-          <h1 className="text-3xl font-bold mb-6">Chat App</h1>
+      <div style={{ padding: "2rem" }}>
+        <h1>Real-Time Chat</h1>
+
+        <button onClick={() => setMode("login")}>Login</button>
+        <button onClick={() => setMode("signup")}>Signup</button>
+
+        <form onSubmit={handleAuth}>
+          {mode === "signup" && (
+            <input
+              placeholder="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+            />
+          )}
 
           <input
-            className="w-full p-2 mb-3 rounded bg-zinc-700"
-            placeholder="Email"
-            onChange={(e) =>
-              setLoginData({ ...loginData, email: e.target.value })
-            }
+            placeholder="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
           />
 
           <input
-            className="w-full p-2 mb-3 rounded bg-zinc-700"
+            placeholder="password"
             type="password"
-            placeholder="Password"
-            onChange={(e) =>
-              setLoginData({ ...loginData, password: e.target.value })
-            }
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
           />
 
-          <button
-            className="w-full bg-blue-600 p-2 rounded hover:bg-blue-500"
-            onClick={login}
-          >
-            Login
+          <button type="submit">
+            {mode === "login" ? "Login" : "Signup"}
           </button>
-
-          <hr className="my-6 border-zinc-600" />
-
-          <h2 className="text-xl mb-3">Register</h2>
-
-          <input
-            className="w-full p-2 mb-3 rounded bg-zinc-700"
-            placeholder="Username"
-            onChange={(e) =>
-              setRegisterData({
-                ...registerData,
-                username: e.target.value,
-              })
-            }
-          />
-
-          <input
-            className="w-full p-2 mb-3 rounded bg-zinc-700"
-            placeholder="Email"
-            onChange={(e) =>
-              setRegisterData({
-                ...registerData,
-                email: e.target.value,
-              })
-            }
-          />
-
-          <input
-            className="w-full p-2 mb-3 rounded bg-zinc-700"
-            type="password"
-            placeholder="Password"
-            onChange={(e) =>
-              setRegisterData({
-                ...registerData,
-                password: e.target.value,
-              })
-            }
-          />
-
-          <button
-            className="w-full bg-green-600 p-2 rounded hover:bg-green-500"
-            onClick={register}
-          >
-            Register
-          </button>
-        </div>
+        </form>
       </div>
     );
   }
 
   return (
-    <div className="h-screen bg-zinc-900 text-white flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-zinc-800 p-4 flex flex-col">
-        <h1 className="text-2xl font-bold mb-6">Chat App</h1>
+    <div style={{ display: "flex", height: "100vh", fontFamily: "Arial" }}>
+      <aside style={{ width: "250px", borderRight: "1px solid #ddd", padding: "1rem" }}>
+        <h2>Rooms</h2>
 
-        <div className="mb-4">
-          <p className="text-sm text-zinc-400">Logged in as:</p>
-          <p>{currentUser?.username}</p>
-        </div>
-
-        <button
-          className="bg-red-600 p-2 rounded hover:bg-red-500 mt-auto"
-          onClick={logout}
-        >
-          Logout
-        </button>
-      </div>
-
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {/* Header */}
-        <div className="bg-zinc-800 p-4 border-b border-zinc-700">
-          <h2 className="text-xl font-semibold">General Chat</h2>
-        </div>
-
-        {/* Messages */}
-        <div className="flex-1 p-4 overflow-y-auto space-y-4">
-          <div className="bg-zinc-800 p-3 rounded-xl w-fit">
-            Hello 👋
-          </div>
-
-          <div className="bg-blue-600 p-3 rounded-xl w-fit ml-auto">
-            Hi there!
-          </div>
-        </div>
-
-        {/* Input */}
-        <div className="p-4 border-t border-zinc-700 flex gap-2">
+        <form onSubmit={handleCreateRoom}>
           <input
-            className="flex-1 p-3 rounded-xl bg-zinc-800"
-            placeholder="Type a message..."
+            placeholder="New room"
+            value={roomName}
+            onChange={(e) => setRoomName(e.target.value)}
           />
+          <button type="submit">Create</button>
+        </form>
 
-          <button className="bg-blue-600 px-6 rounded-xl hover:bg-blue-500">
-            Send
-          </button>
-        </div>
-      </div>
+        {rooms.map((room) => (
+          <div
+            key={room.id}
+            onClick={() => openRoom(room)}
+            style={{
+              padding: "0.75rem",
+              cursor: "pointer",
+              background: activeRoom?.id === room.id ? "#eee" : "white",
+            }}
+          >
+            {room.name}
+          </div>
+        ))}
+      </aside>
+
+      <main style={{ flex: 1, padding: "1rem" }}>
+        {activeRoom ? (
+          <>
+            <h2>{activeRoom.name}</h2>
+
+            <div style={{ height: "70vh", overflowY: "auto", border: "1px solid #ddd", padding: "1rem" }}>
+              {messages.map((msg) => (
+                <div key={msg.id} style={{ marginBottom: "1rem" }}>
+                  <strong>{msg.username || msg.user_id}</strong>
+                  <p>{msg.content}</p>
+                </div>
+              ))}
+            </div>
+
+            <form onSubmit={sendMessage} style={{ marginTop: "1rem" }}>
+              <input
+                placeholder="Type message..."
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                style={{ width: "80%" }}
+              />
+              <button type="submit">Send</button>
+            </form>
+          </>
+        ) : (
+          <h2>Select a room</h2>
+        )}
+      </main>
     </div>
   );
 }
