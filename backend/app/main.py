@@ -1,7 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, chat, ws
+from app.api.routes import auth, messages, websocket
+from app.core.database import Base, engine
+
+Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
 
@@ -13,10 +16,9 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-app.include_router(auth.router, prefix="/auth", tags=["auth"])
-app.include_router(chat.router, prefix="/chat", tags=["chat"])
-app.include_router(ws.router, tags=["websocket"])
-
+app.include_router(auth.router, prefix="/auth")
+app.include_router(messages.router, prefix="/messages")
+app.include_router(websocket.router)
 
 @app.get("/")
 def root():
