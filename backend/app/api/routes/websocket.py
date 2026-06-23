@@ -1,21 +1,66 @@
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect
+import json
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from sqlalchemy.orm import Session
+
+from app.core.database import SessionLocal
+from app.core.security import verify_token
+from app.models.user import User
+from app.models.message import Message
 
 router = APIRouter()
 
-active_connections = []
+rooms = {}
 
+@router.websocket("/ws/rooms/{room_id}")
+async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(...)):
+    payload = verify_token(token)
 
-@router.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
+    if payload is None:
+        await websocket.close()
+        return
+
+    db: Session = SessionLocal()
+    user = db.query(User).filter(User.email == payload.get("sub")).first()
+
+    if user is None:
+        await websocket.close()
+        db.close()
+        return
+
     await websocket.accept()
-    active_connections.append(websocket)
+
+    if room_id not in rooms:
+        rooms[room_id] = []
+
+    rooms[room_id].append(websocket)
 
     try:
         while True:
-            message = await websocket.receive_text()
+            data = await websocket.receive_text()
+            data = json.loads(data)
 
-            for connection in active_connections:
-                await connection.send_text(message)
+            message = Message(
+                content=data["content"],
+                user_id=user.id,
+                room_id=room_id,
+            )
+
+            db.add(message)
+            db.commit()
+            db.refresh(message)
+
+            outgoing = {
+                "id": message.id,
+                "content": message.content,
+                "user_id": user.id,
+                "username": user.username,
+                "room_id": room_id,
+            }
+
+            for connection in rooms[room_id]:
+                await connection.send_text(json.dumps(outgoing))
 
     except WebSocketDisconnect:
-        active_connections.remove(websocket)
+        rooms[room_id].remove(websocket)
+    finally:
+        db.close()

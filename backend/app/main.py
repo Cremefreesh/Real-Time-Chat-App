@@ -1,8 +1,12 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, messages, websocket
+from app.api.routes import auth, rooms, messages, websocket
 from app.core.database import Base, engine
+
+from app.models.user import User
+from app.models.room import Room
+from app.models.message import Message
 
 Base.metadata.create_all(bind=engine)
 
@@ -17,6 +21,7 @@ app.add_middleware(
 )
 
 app.include_router(auth.router, prefix="/auth")
+app.include_router(rooms.router, prefix="/rooms")
 app.include_router(messages.router, prefix="/messages")
 app.include_router(websocket.router)
 
