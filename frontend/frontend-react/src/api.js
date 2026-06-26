@@ -68,3 +68,48 @@ export async function getMessages(roomId) {
 
   return res.json();
 }
+
+export async function getMyProfile() {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${API_URL}/profiles/me`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to load profile");
+  }
+
+  return res.json();
+}
+
+export async function updateMyProfile(profile) {
+  const token = localStorage.getItem("token");
+
+  const res = await fetch(`${API_URL}/profiles/me`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(profile),
+  });
+
+  if (!res.ok) {
+    throw new Error("Failed to update profile");
+  }
+
+  return res.json();
+}
+
+export async function getUserProfile(userId) {
+  const res = await fetch(`${API_URL}/profiles/${userId}`);
+
+  if (!res.ok) {
+    throw new Error("Failed to load user profile");
+  }
+
+  return res.json();
+}
