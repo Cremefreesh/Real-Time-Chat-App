@@ -9,6 +9,7 @@ from app.models.room import Room
 from app.models.message import Message
 
 from app.api.routes import auth, messages, websocket, search
+from app.api.routes import profiles
 
 Base.metadata.create_all(bind=engine)
 
@@ -27,6 +28,7 @@ app.include_router(rooms.router, prefix="/rooms")
 app.include_router(messages.router, prefix="/messages")
 app.include_router(websocket.router)
 app.include_router(search.router, prefix="/search", tags=["search"])
+app.include_router(profiles.router, prefix="/profiles", tags=["profiles"])
 
 @app.get("/")
 def root():
