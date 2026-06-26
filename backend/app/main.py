@@ -8,6 +8,8 @@ from app.models.user import User
 from app.models.room import Room
 from app.models.message import Message
 
+from app.api.routes import auth, messages, websocket, search
+
 Base.metadata.create_all(bind=engine)
 
 app = FastAPI()
@@ -24,6 +26,7 @@ app.include_router(auth.router, prefix="/auth")
 app.include_router(rooms.router, prefix="/rooms")
 app.include_router(messages.router, prefix="/messages")
 app.include_router(websocket.router)
+app.include_router(search.router, prefix="/search", tags=["search"])
 
 @app.get("/")
 def root():

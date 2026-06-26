@@ -6,6 +6,9 @@ from app.core.database import SessionLocal
 from app.core.security import verify_token
 from app.models.user import User
 from app.models.message import Message
+from app.utils.embedding_service import generate_embedding
+#care changed app.utils from app.services.embedding_service
+
 
 router = APIRouter()
 
@@ -43,6 +46,7 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
                 content=data["content"],
                 user_id=user.id,
                 room_id=room_id,
+                embedding=generate_embedding(data["content"]),
             )
 
             db.add(message)
