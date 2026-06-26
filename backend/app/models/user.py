@@ -10,6 +10,9 @@ class User(Base):
     email = Column(String, unique=True, index=True, nullable=False)
     hashed_password = Column(String, nullable=False)
 
+    bio = Column(String, nullable=True)
+    avatar_url = Column(String, nullable=True)
+
     from pydantic import BaseModel
 
 class UserCreate(BaseModel):
