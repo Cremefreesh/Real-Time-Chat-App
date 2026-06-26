@@ -9,6 +9,7 @@ from app.models.message import Message
 from app.utils.embedding_service import generate_embedding
 #care changed app.utils from app.services.embedding_service
 
+from app.services.moderation_service import moderate_message
 
 router = APIRouter()
 
@@ -41,6 +42,18 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
         while True:
             data = await websocket.receive_text()
             data = json.loads(data)
+
+            moderation = moderate_message(data["content"])
+
+            if not moderation["allowed"]:
+                await websocket.send_text(json.dumps({
+                    "type": "moderation_warning",
+                    "message": "Your message was blocked by moderation.",
+                    "reason": moderation["reason"],
+                    "flagged_words": moderation["flagged_words"],
+                }))
+                continue
+
 
             message = Message(
                 content=data["content"],
