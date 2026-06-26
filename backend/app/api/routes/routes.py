@@ -5,8 +5,8 @@ from sqlalchemy.orm import Session
 
 from app.core.database import get_db
 from app.models.message import Message
-from app.services.embedding_service import generate_embedding
-from app.services.cosine_similarity import cosine_similarity
+from app.utils.embedding_service import generate_embedding
+from app.utils.cosine_similarity import cosine_similarity
 
 router = APIRouter()
 
