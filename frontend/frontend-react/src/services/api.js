@@ -1,43 +1,72 @@
 const API_URL = "http://127.0.0.1:8000";
 
+function getErrorMessage(data, fallback) {
+  if (typeof data?.detail === "string") {
+    return data.detail;
+  }
+
+  if (Array.isArray(data?.detail)) {
+    return data.detail
+      .map((error) => {
+        const location = error.loc?.join(" → ") || "request";
+        return `${location}: ${error.msg}`;
+      })
+      .join("\n");
+  }
+
+  return fallback;
+}
+
 export async function register(username, email, password) {
+  const payload = {
+    username,
+    email,
+    password,
+  };
+
+  console.log("Register payload:", payload);
+
   const response = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      username,
-      email,
-      password,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.detail || "Registration failed");
+    throw new Error(
+      getErrorMessage(data, "Registration failed")
+    );
   }
 
   return data;
 }
 
 export async function login(email, password) {
+  const payload = {
+    email,
+    password,
+  };
+
+  console.log("Login payload:", payload);
+
   const response = await fetch(`${API_URL}/auth/login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({
-      email,
-      password,
-    }),
+    body: JSON.stringify(payload),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.detail || "Login failed");
+    throw new Error(
+      getErrorMessage(data, "Login failed")
+    );
   }
 
   localStorage.setItem("token", data.access_token);
@@ -57,7 +86,9 @@ export async function getCurrentUser() {
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(data.detail || "Unable to load user");
+    throw new Error(
+      getErrorMessage(data, "Unable to load user")
+    );
   }
 
   return data;
