@@ -1,38 +1,20 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
-class ProfileUpdate(BaseModel):
-    username: Optional[str] = None
-    bio: Optional[str] = None
-    avatar_url: Optional[str] = None
-
-
-class ProfileRead(BaseModel):
-    id: int
-    username: str
-    email: str
-    bio: Optional[str] = None
-    avatar_url: Optional[str] = None
-
-    class Config:
-        from_attributes = True
-        
 
 class UserCreate(BaseModel):
-    username: str
-    email: str
+    username: str = Field(min_length=3, max_length=30)
+    email: EmailStr
+    password: str = Field(min_length=8, max_length=128)
+
+
+class UserLogin(BaseModel):
+    email: EmailStr
     password: str
 
 
 class UserRead(BaseModel):
     id: int
-    email: str
+    username: str
+    email: EmailStr
 
-    class Config:
-        from_attributes = True
-
-        from pydantic import BaseModel
-
-class UserLogin(BaseModel):
-    email: str
-    password: str
+    model_config = ConfigDict(from_attributes=True)

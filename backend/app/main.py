@@ -1,35 +1,31 @@
 from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import auth, rooms, messages, websocket
+from app.api.routes.auth import router as auth_router
 from app.core.database import Base, engine
 
-from app.models.user import User
-from app.models.room import Room
-from app.models.message import Message
-
-from app.api.routes import auth, messages, websocket, search
-from app.api.routes import profiles
+# Import models before create_all so SQLAlchemy knows
+# which tables need to be created.
+from app.models.user import User  # noqa: F401
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+app = FastAPI(
+    title="Real-Time Chat API",
+    version="1.0.0",
 )
 
-app.include_router(auth.router, prefix="/auth")
-app.include_router(rooms.router, prefix="/rooms")
-app.include_router(messages.router, prefix="/messages")
-app.include_router(websocket.router)
-app.include_router(search.router, prefix="/search", tags=["search"])
-app.include_router(profiles.router, prefix="/profiles", tags=["profiles"])
+app.include_router(auth_router)
+
 
 @app.get("/")
 def root():
-    return {"message": "API running"}
+    return {
+        "message": "Real-Time Chat API is running"
+    }
+
+
+@app.get("/health")
+def health_check():
+    return {
+        "status": "healthy"
+    }
