@@ -1,186 +1,202 @@
 import { useEffect, useState } from "react";
-import { login, signup, getRooms, createRoom, getMessages } from "./api";
+import {
+  register,
+  login,
+  getCurrentUser,
+} from "./services/api";
 
 function App() {
   const [mode, setMode] = useState("login");
+
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const [rooms, setRooms] = useState([]);
-  const [roomName, setRoomName] = useState("");
-  const [activeRoom, setActiveRoom] = useState(null);
+  const [token, setToken] = useState(() =>
+    localStorage.getItem("token")
+  );
 
-  const [messages, setMessages] = useState([]);
-  const [messageInput, setMessageInput] = useState("");
-  const [socket, setSocket] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const token = localStorage.getItem("token");
+  async function loadCurrentUser() {
+    try {
+      const user = await getCurrentUser();
+      setCurrentUser(user);
+    } catch (err) {
+      console.error(err);
 
-  async function handleAuth(e) {
-    e.preventDefault();
-
-    if (mode === "signup") {
-      await signup(username, email, password);
-      setMode("login");
-      return;
+      localStorage.removeItem("token");
+      setToken(null);
+      setCurrentUser(null);
     }
-
-    await login(email, password);
-    loadRooms();
-  }
-
-  async function loadRooms() {
-    const data = await getRooms();
-    setRooms(data);
-  }
-
-  async function handleCreateRoom(e) {
-    e.preventDefault();
-
-    await createRoom(roomName);
-    setRoomName("");
-    loadRooms();
-  }
-
-  async function openRoom(room) {
-    setActiveRoom(room);
-
-    const oldMessages = await getMessages(room.id);
-    setMessages(oldMessages);
-
-    if (socket) {
-      socket.close();
-    }
-
-    const token = localStorage.getItem("token");
-    const ws = new WebSocket(
-      `ws://127.0.0.1:8000/ws/rooms/${room.id}?token=${token}`
-    );
-
-    ws.onmessage = (event) => {
-      const newMessage = JSON.parse(event.data);
-      setMessages((prev) => [...prev, newMessage]);
-    };
-
-    setSocket(ws);
-  }
-
-  function sendMessage(e) {
-    e.preventDefault();
-
-    if (!socket || !messageInput.trim()) return;
-
-    socket.send(
-      JSON.stringify({
-        content: messageInput,
-      })
-    );
-
-    setMessageInput("");
   }
 
   useEffect(() => {
     if (token) {
-      loadRooms();
+      loadCurrentUser();
     }
-  }, []);
+  }, [token]);
+
+  async function handleAuth(event) {
+    event.preventDefault();
+
+    setLoading(true);
+    setError("");
+
+    try {
+      if (mode === "signup") {
+        await register(username, email, password);
+
+        setMode("login");
+        setPassword("");
+        setError("Account created. You can now log in.");
+        return;
+      }
+
+      const loginData = await login(email, password);
+
+      setToken(loginData.access_token);
+      setPassword("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  function handleLogout() {
+    localStorage.removeItem("token");
+    setToken(null);
+    setCurrentUser(null);
+  }
 
   if (!token) {
     return (
-      <div style={{ padding: "2rem" }}>
+      <div
+        style={{
+          maxWidth: "420px",
+          margin: "4rem auto",
+          padding: "2rem",
+          fontFamily: "Arial",
+        }}
+      >
         <h1>Real-Time Chat</h1>
 
-        <button onClick={() => setMode("login")}>Login</button>
-        <button onClick={() => setMode("signup")}>Signup</button>
+        <div style={{ display: "flex", gap: "0.5rem" }}>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("login");
+              setError("");
+            }}
+          >
+            Login
+          </button>
 
-        <form onSubmit={handleAuth}>
+          <button
+            type="button"
+            onClick={() => {
+              setMode("signup");
+              setError("");
+            }}
+          >
+            Sign up
+          </button>
+        </div>
+
+        <form
+          onSubmit={handleAuth}
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            marginTop: "1.5rem",
+          }}
+        >
           {mode === "signup" && (
             <input
-              placeholder="username"
+              type="text"
+              placeholder="Username"
               value={username}
-              onChange={(e) => setUsername(e.target.value)}
+              onChange={(event) => setUsername(event.target.value)}
+              required
             />
           )}
 
           <input
-            placeholder="email"
+            type="email"
+            placeholder="Email"
             value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            onChange={(event) => setEmail(event.target.value)}
+            required
           />
 
           <input
-            placeholder="password"
             type="password"
+            placeholder="Password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(event) => setPassword(event.target.value)}
+            required
           />
 
-          <button type="submit">
-            {mode === "login" ? "Login" : "Signup"}
+          <button type="submit" disabled={loading}>
+            {loading
+              ? "Loading..."
+              : mode === "login"
+                ? "Login"
+                : "Create account"}
           </button>
         </form>
+
+        {error && (
+          <p
+            style={{
+              marginTop: "1rem",
+              color: error.startsWith("Account created")
+                ? "green"
+                : "crimson",
+            }}
+          >
+            {error}
+          </p>
+        )}
       </div>
     );
   }
 
   return (
-    <div style={{ display: "flex", height: "100vh", fontFamily: "Arial" }}>
-      <aside style={{ width: "250px", borderRight: "1px solid #ddd", padding: "1rem" }}>
-        <h2>Rooms</h2>
+    <div
+      style={{
+        padding: "2rem",
+        fontFamily: "Arial",
+      }}
+    >
+      <h1>Real-Time Chat</h1>
 
-        <form onSubmit={handleCreateRoom}>
-          <input
-            placeholder="New room"
-            value={roomName}
-            onChange={(e) => setRoomName(e.target.value)}
-          />
-          <button type="submit">Create</button>
-        </form>
+      {currentUser ? (
+        <>
+          <h2>Authentication works 🎉</h2>
 
-        {rooms.map((room) => (
-          <div
-            key={room.id}
-            onClick={() => openRoom(room)}
-            style={{
-              padding: "0.75rem",
-              cursor: "pointer",
-              background: activeRoom?.id === room.id ? "#eee" : "white",
-            }}
-          >
-            {room.name}
-          </div>
-        ))}
-      </aside>
+          <p>
+            Logged in as{" "}
+            <strong>
+              {currentUser.username || currentUser.email}
+            </strong>
+          </p>
 
-      <main style={{ flex: 1, padding: "1rem" }}>
-        {activeRoom ? (
-          <>
-            <h2>{activeRoom.name}</h2>
+          <pre>
+            {JSON.stringify(currentUser, null, 2)}
+          </pre>
+        </>
+      ) : (
+        <p>Loading your profile...</p>
+      )}
 
-            <div style={{ height: "70vh", overflowY: "auto", border: "1px solid #ddd", padding: "1rem" }}>
-              {messages.map((msg) => (
-                <div key={msg.id} style={{ marginBottom: "1rem" }}>
-                  <strong>{msg.username || msg.user_id}</strong>
-                  <p>{msg.content}</p>
-                </div>
-              ))}
-            </div>
-
-            <form onSubmit={sendMessage} style={{ marginTop: "1rem" }}>
-              <input
-                placeholder="Type message..."
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                style={{ width: "80%" }}
-              />
-              <button type="submit">Send</button>
-            </form>
-          </>
-        ) : (
-          <h2>Select a room</h2>
-        )}
-      </main>
+      <button type="button" onClick={handleLogout}>
+        Log out
+      </button>
     </div>
   );
 }
