@@ -1,14 +1,32 @@
 # Python
-__pycache__/
-*.py[cod]
-*.env
 venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Environment
 .env
-*.sqlite3
 
-# VS Code
+# Node
+node_modules/
+
+# Build
+dist/
+build/
+
+# IDE
 .vscode/
+.idea/
 
-# OS
+# macOS
 .DS_Store
-Thumbs.db
+
+# Logs
+*.log
+
+# Coverage
+.coverage
+htmlcov/
+
+# SQLite
+*.db
