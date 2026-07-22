@@ -9,7 +9,7 @@ from app.models.message import Message
 from app.api.routes import auth
 from app.api.routes import rooms
 from app.api.routes import messages
-from app.api.routes import profiles
+#from app.api.routes import profiles
 from app.api.routes import ws
 
 
@@ -51,11 +51,12 @@ app.include_router(
     tags=["Messages"],
 )
 
-app.include_router(
-    profiles.router,
-    prefix="/profiles",
-    tags=["Profiles"],
-)
+#
+#app.include_router(
+#    profiles.router,
+#    prefix="/profiles",
+#    tags=["Profiles"],
+#)
 
 app.include_router(
     ws.router,
