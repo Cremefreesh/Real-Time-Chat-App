@@ -2,8 +2,12 @@ import { useEffect, useState } from "react";
 import {
   register,
   login,
-  getCurrentUser,
+  getRooms,
 } from "./services/api";
+
+import { RoomSelector } from "./components/RoomSelector";
+import { ChatRoom } from "./components/ChatRoom";
+
 
 function App() {
   const [mode, setMode] = useState("login");
@@ -20,212 +24,148 @@ function App() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  async function loadCurrentUser() {
-    try {
-      const user = await getCurrentUser();
-      setCurrentUser(user);
-    } catch (err) {
-      console.error(err);
-
-      localStorage.removeItem("token");
-      setToken(null);
-      setCurrentUser(null);
-    }
-  }
+  const [rooms, setRooms] = useState([]);
+  const [selectedRoom, setSelectedRoom] =
+    useState(null);
 
   useEffect(() => {
-    if (token) {
-      loadCurrentUser();
-    }
-  }, [token]);
-
- const [token, setToken] = useState(
-  () => localStorage.getItem("token")
-);
-
-async function handleAuth(event) {
-  event.preventDefault();
-
-  try {
-    if (mode === "signup") {
-      await signup(username, email, password);
-      setMode("login");
+    if (!token) {
       return;
     }
 
-    const data = await login(email, password);
-
-    localStorage.setItem("token", data.access_token);
-    setToken(data.access_token);
-
-    await loadRooms(data.access_token);
-  } catch (error) {
-    console.error(error);
-  }
-}
-
-  async function loadRooms(authToken = token) {
-  const response = await fetch(
-    "http://127.0.0.1:8000/rooms/",
-    {
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-      },
+    async function loadRooms() {
+      try {
+        const roomData = await getRooms(token);
+        setRooms(roomData);
+      } catch (loadError) {
+        console.error(loadError);
+        setError(loadError.message);
+      }
     }
-  );
 
-  if (!response.ok) {
-    throw new Error("Could not load rooms");
-  }
+    loadRooms();
+  }, [token]);
 
-  const data = await response.json();
-  setRooms(data);
-}
+  async function handleAuth(event) {
+    event.preventDefault();
+    setError("");
 
-  async function handleLogin(email, password) {
     try {
+      if (mode === "signup") {
+        await register(username, email, password);
+
+        setMode("login");
+        setPassword("");
+        return;
+      }
+
       const data = await login(email, password);
 
       localStorage.setItem("token", data.access_token);
       setToken(data.access_token);
-    } catch (error) {
-      console.error("Login failed:", error);
+    } catch (authError) {
+      console.error(authError);
+      setError(authError.message);
     }
   }
 
-
   function handleLogout() {
     localStorage.removeItem("token");
+
     setToken(null);
-    setCurrentUser(null);
+    setRooms([]);
+    setSelectedRoom(null);
+    setEmail("");
+    setPassword("");
   }
 
   if (!token) {
     return (
-      <div
-        style={{
-          maxWidth: "420px",
-          margin: "4rem auto",
-          padding: "2rem",
-          fontFamily: "Arial",
-        }}
-      >
-        <h1>Real-Time Chat</h1>
+      <main>
+        <h1>
+          {mode === "login"
+            ? "Login"
+            : "Create account"}
+        </h1>
 
-        <div style={{ display: "flex", gap: "0.5rem" }}>
-          <button
-            type="button"
-            onClick={() => {
-              setMode("login");
-              setError("");
-            }}
-          >
-            Login
-          </button>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMode("signup");
-              setError("");
-            }}
-          >
-            Sign up
-          </button>
-        </div>
-
-        <form
-          onSubmit={handleAuth}
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "1rem",
-            marginTop: "1.5rem",
-          }}
-        >
+        <form onSubmit={handleAuth}>
           {mode === "signup" && (
             <input
               type="text"
-              placeholder="Username"
               value={username}
-              onChange={(event) => setUsername(event.target.value)}
+              onChange={(event) =>
+                setUsername(event.target.value)
+              }
+              placeholder="Username"
               required
             />
           )}
 
           <input
             type="email"
-            placeholder="Email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) =>
+              setEmail(event.target.value)
+            }
+            placeholder="Email"
             required
           />
 
           <input
             type="password"
-            placeholder="Password"
             value={password}
-            onChange={(event) => setPassword(event.target.value)}
+            onChange={(event) =>
+              setPassword(event.target.value)
+            }
+            placeholder="Password"
             required
           />
 
-          <button type="submit" disabled={loading}>
-            {loading
-              ? "Loading..."
-              : mode === "login"
-                ? "Login"
-                : "Create account"}
+          <button type="submit">
+            {mode === "login"
+              ? "Login"
+              : "Register"}
           </button>
         </form>
 
-        {error && (
-          <p
-            style={{
-              marginTop: "1rem",
-              color: error.startsWith("Account created")
-                ? "green"
-                : "crimson",
-            }}
-          >
-            {error}
-          </p>
-        )}
-      </div>
+        {error && <p>{error}</p>}
+
+        <button
+          type="button"
+          onClick={() => {
+            setError("");
+
+            setMode((currentMode) =>
+              currentMode === "login"
+                ? "signup"
+                : "login"
+            );
+          }}
+        >
+          {mode === "login"
+            ? "Create an account"
+            : "Return to login"}
+        </button>
+      </main>
+    );
+  }
+
+  if (!selectedRoom) {
+    return (
+      <RoomSelector
+        rooms={rooms}
+        onSelectRoom={setSelectedRoom}
+        onLogout={handleLogout}
+      />
     );
   }
 
   return (
-    <div
-      style={{
-        padding: "2rem",
-        fontFamily: "Arial",
-      }}
-    >
-      <h1>Real-Time Chat</h1>
-
-      {currentUser ? (
-        <>
-          <h2>Authentication works 🎉</h2>
-
-          <p>
-            Logged in as{" "}
-            <strong>
-              {currentUser.username || currentUser.email}
-            </strong>
-          </p>
-
-          <pre>
-            {JSON.stringify(currentUser, null, 2)}
-          </pre>
-        </>
-      ) : (
-        <p>Loading your profile...</p>
-      )}
-
-      <button type="button" onClick={handleLogout}>
-        Log out
-      </button>
-    </div>
+    <ChatRoom
+      room={selectedRoom}
+      token={token}
+      onLeaveRoom={() => setSelectedRoom(null)}
+    />
   );
 }
 
