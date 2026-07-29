@@ -45,11 +45,16 @@ export async function register(username, email, password) {
   return data;
 }
 
+
 export async function login(email, password) {
   const payload = {
     email,
     password,
   };
+
+
+
+
 
   console.log("Login payload:", payload);
 

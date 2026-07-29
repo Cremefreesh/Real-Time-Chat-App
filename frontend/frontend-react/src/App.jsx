@@ -66,6 +66,19 @@ function App() {
     }
   }
 
+
+  async function handleLogin(email, password) {
+    try {
+      const data = await login(email, password);
+
+      localStorage.setItem("token", data.access_token);
+      setToken(data.access_token);
+    } catch (error) {
+      console.error("Login failed:", error);
+    }
+  }
+
+
   function handleLogout() {
     localStorage.removeItem("token");
     setToken(null);
