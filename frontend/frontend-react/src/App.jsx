@@ -39,33 +39,48 @@ function App() {
     }
   }, [token]);
 
-  async function handleAuth(event) {
-    event.preventDefault();
+ const [token, setToken] = useState(
+  () => localStorage.getItem("token")
+);
 
-    setLoading(true);
-    setError("");
+async function handleAuth(event) {
+  event.preventDefault();
 
-    try {
-      if (mode === "signup") {
-        await register(username, email, password);
-
-        setMode("login");
-        setPassword("");
-        setError("Account created. You can now log in.");
-        return;
-      }
-
-      const loginData = await login(email, password);
-
-      setToken(loginData.access_token);
-      setPassword("");
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+  try {
+    if (mode === "signup") {
+      await signup(username, email, password);
+      setMode("login");
+      return;
     }
+
+    const data = await login(email, password);
+
+    localStorage.setItem("token", data.access_token);
+    setToken(data.access_token);
+
+    await loadRooms(data.access_token);
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+  async function loadRooms(authToken = token) {
+  const response = await fetch(
+    "http://127.0.0.1:8000/rooms/",
+    {
+      headers: {
+        Authorization: `Bearer ${authToken}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("Could not load rooms");
   }
 
+  const data = await response.json();
+  setRooms(data);
+}
 
   async function handleLogin(email, password) {
     try {
