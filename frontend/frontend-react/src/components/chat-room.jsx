@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import "./chat-room.css";
 
 const API_URL = "http://127.0.0.1:8000";
 const WEBSOCKET_URL = "ws://127.0.0.1:8000";
@@ -14,6 +15,7 @@ export function ChatRoom({
     useState("Connecting...");
 
   const socketRef = useRef(null);
+  const bottomOfMessagesRef = useRef(null);
 
   useEffect(() => {
     if (!room || !token) {
@@ -36,7 +38,10 @@ export function ChatRoom({
         }
 
         const data = await response.json();
-        setMessages(data);
+
+        console.log("Loaded messages:", data);
+
+        setMessages(Array.isArray(data) ? data : []);
       } catch (error) {
         console.error("Message loading error:", error);
       }
@@ -51,21 +56,36 @@ export function ChatRoom({
     socketRef.current = socket;
 
     socket.onopen = () => {
+      console.log("WebSocket connected");
       setConnectionStatus("Connected");
     };
 
     socket.onmessage = (event) => {
-      const incomingMessage = JSON.parse(event.data);
+      console.log("Raw WebSocket message:", event.data);
 
-      if (incomingMessage.type === "chat_message") {
-        setMessages((currentMessages) => [
-          ...currentMessages,
-          incomingMessage,
-        ]);
-      }
+      try {
+        const incomingMessage = JSON.parse(event.data);
 
-      if (incomingMessage.type === "error") {
-        console.error(incomingMessage.message);
+        console.log(
+          "Parsed WebSocket message:",
+          incomingMessage
+        );
+
+        if (incomingMessage.type === "chat_message") {
+          setMessages((currentMessages) => [
+            ...currentMessages,
+            incomingMessage,
+          ]);
+        }
+
+        if (incomingMessage.type === "error") {
+          console.error(incomingMessage.message);
+        }
+      } catch (error) {
+        console.error(
+          "Could not parse WebSocket message:",
+          error
+        );
       }
     };
 
@@ -75,6 +95,7 @@ export function ChatRoom({
     };
 
     socket.onclose = () => {
+      console.log("WebSocket disconnected");
       setConnectionStatus("Disconnected");
     };
 
@@ -83,6 +104,12 @@ export function ChatRoom({
       socketRef.current = null;
     };
   }, [room, token]);
+
+  useEffect(() => {
+    bottomOfMessagesRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
 
   function handleSubmit(event) {
     event.preventDefault();
@@ -109,49 +136,129 @@ export function ChatRoom({
   }
 
   return (
-    <main>
-      <header>
-        <button type="button" onClick={onLeaveRoom}>
-          Back to rooms
+    <main className="chat-page">
+      <header className="chat-header">
+        <button
+          className="back-button"
+          type="button"
+          onClick={onLeaveRoom}
+        >
+          ← Rooms
         </button>
 
-        <h1>{room.name}</h1>
+        <div className="chat-room-details">
+          <span className="room-hash">#</span>
 
-        <span>{connectionStatus}</span>
+          <div>
+            <h1>{room.name}</h1>
+            <p>Real-time conversation</p>
+          </div>
+        </div>
+
+        <div className="connection-indicator">
+          <span
+            className={`connection-dot ${
+              connectionStatus === "Connected"
+                ? "connected"
+                : ""
+            }`}
+          />
+
+          {connectionStatus}
+        </div>
       </header>
 
-      <section>
+      <section className="message-feed">
         {messages.length === 0 ? (
-          <p>No messages yet. Start the conversation!</p>
-        ) : (
-          messages.map((message) => (
-            <article key={message.id}>
-              <strong>
-                {message.username ||
-                  `User ${message.user_id}`}
-              </strong>
+          <div className="empty-chat">
+            <div className="empty-chat-icon">#</div>
 
-              <p>{message.content}</p>
-            </article>
-          ))
+            <h2>Welcome to {room.name}</h2>
+
+            <p>
+              This is the beginning of the conversation.
+            </p>
+          </div>
+        ) : (
+          messages.map((message, index) => {
+            const username =
+              message.username ||
+              message.user?.username ||
+              `User ${message.user_id ?? "Unknown"}`;
+
+            const content =
+              message.content ||
+              message.message ||
+              "";
+
+            const messageKey =
+              message.id ||
+              message.message_id ||
+              `${index}-${content}`;
+
+            return (
+              <article
+                className="chat-message"
+                key={messageKey}
+              >
+                <div className="message-avatar">
+                  {username
+                    .charAt(0)
+                    .toUpperCase()}
+                </div>
+
+                <div className="message-body">
+                  <div className="message-header">
+                    <strong>{username}</strong>
+
+                    {message.created_at && (
+                      <time>
+                        {new Date(
+                          message.created_at
+                        ).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </time>
+                    )}
+                  </div>
+
+                  <p>{content}</p>
+                </div>
+              </article>
+            );
+          })
         )}
+
+        <div ref={bottomOfMessagesRef} />
       </section>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="text"
-          value={messageInput}
-          onChange={(event) =>
-            setMessageInput(event.target.value)
-          }
-          placeholder={`Message ${room.name}`}
-          maxLength={2000}
-        />
+      <footer className="message-composer-wrapper">
+        <form
+          className="message-composer"
+          onSubmit={handleSubmit}
+        >
+          <input
+            type="text"
+            value={messageInput}
+            onChange={(event) =>
+              setMessageInput(event.target.value)
+            }
+            placeholder={`Message #${room.name}`}
+            maxLength={2000}
+          />
 
-        <button type="submit">
-          Send
-        </button>
-      </form>
+          <button
+            type="submit"
+            disabled={
+              !messageInput.trim() ||
+              connectionStatus !== "Connected"
+            }
+          >
+            Send
+          </button>
+        </form>
+      </footer>
     </main>
   );
 }
