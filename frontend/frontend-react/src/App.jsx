@@ -5,8 +5,8 @@ import {
   getRooms,
 } from "./services/api";
 
-import { RoomSelector } from "./components/RoomSelector";
-import { ChatRoom } from "./components/ChatRoom";
+import { RoomSelector } from "./components/roomSelector";
+import { ChatRoom } from "./components/chat-room";
 
 
 function App() {
@@ -24,10 +24,16 @@ function App() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
-  const [rooms, setRooms] = useState([]);
+  const [rooms, setRooms] = useState([
+  { id: 1, name: "General" },
+  { id: 2, name: "Gaming" },
+  { id: 3, name: "Programming" },
+  ]);
+
   const [selectedRoom, setSelectedRoom] =
     useState(null);
 
+  /*
   useEffect(() => {
     if (!token) {
       return;
@@ -45,6 +51,7 @@ function App() {
 
     loadRooms();
   }, [token]);
+  */
 
   async function handleAuth(event) {
     event.preventDefault();
@@ -63,6 +70,7 @@ function App() {
 
       localStorage.setItem("token", data.access_token);
       setToken(data.access_token);
+
     } catch (authError) {
       console.error(authError);
       setError(authError.message);
