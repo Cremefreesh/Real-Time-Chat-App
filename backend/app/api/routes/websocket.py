@@ -67,11 +67,17 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
             db.refresh(message)
 
             outgoing = {
+                "type": "chat_message",
                 "id": message.id,
                 "content": message.content,
                 "user_id": user.id,
                 "username": user.username,
                 "room_id": room_id,
+                "created_at": (
+                    message.created_at.isoformat()
+                    if message.created_at
+                    else None
+                ),
             }
 
             for connection in rooms[room_id]:
