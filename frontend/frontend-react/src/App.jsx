@@ -79,14 +79,13 @@ function App() {
   }
 
   function handleLogout() {
-    localStorage.removeItem("token");
+  localStorage.removeItem("token");
 
-    setToken(null);
-    setRooms([]);
-    setSelectedRoom(null);
-    setEmail("");
-    setPassword("");
-  }
+  setToken(null);
+  setSelectedRoom(null);
+  setEmail("");
+  setPassword("");
+}
 
   if (!token) {
     return (
