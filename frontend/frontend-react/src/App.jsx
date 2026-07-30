@@ -7,6 +7,7 @@ import {
 
 import { RoomSelector } from "./components/roomSelector";
 import { ChatRoom } from "./components/chat-room";
+import { AuthForm } from "./components/authForm";
 
 
 function App() {
@@ -89,72 +90,32 @@ function App() {
 
   if (!token) {
     return (
-      <main>
-        <h1>
-          {mode === "login"
-            ? "Login"
-            : "Create account"}
-        </h1>
+      <AuthForm
+        mode={mode}
+        username={username}
+        email={email}
+        password={password}
+        error={error}
+        onUsernameChange={(event) =>
+          setUsername(event.target.value)
+        }
+        onEmailChange={(event) =>
+          setEmail(event.target.value)
+        }
+        onPasswordChange={(event) =>
+          setPassword(event.target.value)
+        }
+        onSubmit={handleAuth}
+        onToggleMode={() => {
+          setError("");
 
-        <form onSubmit={handleAuth}>
-          {mode === "signup" && (
-            <input
-              type="text"
-              value={username}
-              onChange={(event) =>
-                setUsername(event.target.value)
-              }
-              placeholder="Username"
-              required
-            />
-          )}
-
-          <input
-            type="email"
-            value={email}
-            onChange={(event) =>
-              setEmail(event.target.value)
-            }
-            placeholder="Email"
-            required
-          />
-
-          <input
-            type="password"
-            value={password}
-            onChange={(event) =>
-              setPassword(event.target.value)
-            }
-            placeholder="Password"
-            required
-          />
-
-          <button type="submit">
-            {mode === "login"
-              ? "Login"
-              : "Register"}
-          </button>
-        </form>
-
-        {error && <p>{error}</p>}
-
-        <button
-          type="button"
-          onClick={() => {
-            setError("");
-
-            setMode((currentMode) =>
-              currentMode === "login"
-                ? "signup"
-                : "login"
-            );
-          }}
-        >
-          {mode === "login"
-            ? "Create an account"
-            : "Return to login"}
-        </button>
-      </main>
+          setMode((currentMode) =>
+            currentMode === "login"
+              ? "signup"
+              : "login"
+          );
+        }}
+      />
     );
   }
 
