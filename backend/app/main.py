@@ -10,7 +10,7 @@ from app.api.routes import auth
 from app.api.routes import rooms
 from app.api.routes import messages
 #from app.api.routes import profiles
-from app.api.routes import ws
+
 from app.api.routes import auth, rooms, messages, websocket
 
 Base.metadata.create_all(bind=engine)
@@ -58,10 +58,6 @@ app.include_router(
 #    tags=["Profiles"],
 #)
 
-app.include_router(
-    ws.router,
-    tags=["WebSockets"],
-)
 
 app.include_router(
     websocket.router,
