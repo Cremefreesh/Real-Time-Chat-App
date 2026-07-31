@@ -3,17 +3,14 @@
 Backend - Python + FastAPI:
       REST API (login, users, chat history)
       WebSocket connections (real-time messaging)
-      Business logic
 
 Frontend - React + Typescript:
-      Drag and Drop functionality
       Real time updating
 
 Database - PostgreSQL:
       Users
       Messages
-      Conversations
-      Relationships
+      Semantic Search/Cosine Similarity 
 
 Middlewear:
       Auth middleware (protect routes)
@@ -22,7 +19,7 @@ Middlewear:
       Error handling layer  
         
 Real-time Layer:
-      WebSockets (FastAPI or Socket.IO)
+      WebSockets (FastAPI)
       Redis (for scaling messages across servers)
 
 Servers and Deployment:
