@@ -24,7 +24,25 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
         return
 
     db: Session = SessionLocal()
-    user = db.query(User).filter(User.email == payload.get("sub")).first()
+
+
+    subject = payload.get("sub")
+
+    try:
+        user_id = int(subject)
+    except (TypeError, ValueError):
+        print(
+            "WebSocket rejected: invalid user ID in token:",
+            subject,
+        )
+        await websocket.close(code=1008)
+        db.close()
+        return
+
+    user = db.query(User).filter(
+        User.id == user_id
+    ).first()
+
 
     if user is None:
         await websocket.close()
