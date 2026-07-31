@@ -1,11 +1,32 @@
 import math
 
-def cosine_similarity(a: list[float], b: list[float]) -> float:
-    dot = sum(x * y for x, y in zip(a, b))
-    mag_a = math.sqrt(sum(x * x for x in a))
-    mag_b = math.sqrt(sum(y * y for y in b))
 
-    if mag_a == 0 or mag_b == 0:
+def cosine_similarity(
+    vector_a: list[float],
+    vector_b: list[float],
+) -> float:
+    if not vector_a or not vector_b:
+        raise ValueError("Vectors cannot be empty")
+
+    if len(vector_a) != len(vector_b):
+        raise ValueError(
+            "Vectors must have the same dimensions"
+        )
+
+    dot_product = sum(
+        a * b
+        for a, b in zip(vector_a, vector_b)
+    )
+
+    magnitude_a = math.sqrt(
+        sum(value * value for value in vector_a)
+    )
+
+    magnitude_b = math.sqrt(
+        sum(value * value for value in vector_b)
+    )
+
+    if magnitude_a == 0 or magnitude_b == 0:
         return 0.0
 
-    return dot / (mag_a * mag_b)
+    return dot_product / (magnitude_a * magnitude_b)
