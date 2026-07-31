@@ -10,6 +10,7 @@ from app.utils.embedding_service import generate_embedding
 #care changed app.utils from app.services.embedding_service
 
 from app.services.moderation_service import moderate_message
+from app.utils.embedding_service import generate_embedding
 
 router = APIRouter()
 
