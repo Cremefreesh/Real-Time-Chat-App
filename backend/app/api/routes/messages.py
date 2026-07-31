@@ -2,38 +2,56 @@ from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
-from app.core.dependencies import get_current_user
-from app.models.user import User
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from app.core.database import get_db
 from app.models.message import Message
+from app.utils.semantic_search import semantic_search
+
 
 router = APIRouter()
 
 
-@router.get("/")
-def get_messages(room: str = "general", db: Session = Depends(get_db)):
+@router.get("/{room_id}")
+def get_messages(
+    room_id: int,
+    db: Session = Depends(get_db),
+):
     return (
         db.query(Message)
-        .filter(Message.room == room)
+        .filter(Message.room_id == room_id)
         .order_by(Message.created_at.asc())
         .all()
     )
 
 
-@router.post("/")
-def create_message(
-    content: str,
-    room: str = "general",
+@router.get("/{room_id}/search")
+def semantic_search_messages(
+    room_id: int,
+    query: str,
+    limit: int = 5,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
 ):
-    message = Message(
-        content=content,
-        room=room,
-        user_id=current_user.id,
+    messages = (
+        db.query(Message)
+        .filter(Message.room_id == room_id)
+        .all()
     )
 
-    db.add(message)
-    db.commit()
-    db.refresh(message)
+    results = semantic_search(
+        query=query,
+        messages=messages,
+        top_k=limit,
+    )
 
-    return message
+    return [
+        {
+            "id": result["message"].id,
+            "content": result["message"].content,
+            "user_id": result["message"].user_id,
+            "room_id": result["message"].room_id,
+            "similarity": result["similarity"],
+        }
+        for result in results
+    ]
