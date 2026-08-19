@@ -1,3 +1,7 @@
+import asyncio
+
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -6,18 +10,37 @@ from app.models.user import User
 from app.models.room import Room
 from app.models.message import Message
 
-from app.api.routes import auth
-from app.api.routes import rooms
-from app.api.routes import messages
-#from app.api.routes import profiles
-
 from app.api.routes import auth, rooms, messages, websocket
 
+from app.services.redis_listener import redis_listener
+from app.services.redis_service import close_redis
+
+
 Base.metadata.create_all(bind=engine)
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    listener_task = asyncio.create_task(
+        redis_listener()
+    )
+
+    yield
+
+    listener_task.cancel()
+
+    try:
+        await listener_task
+    except asyncio.CancelledError:
+        pass
+
+    await close_redis()
+
 
 app = FastAPI(
     title="Real-Time Chat API",
     version="1.0.0",
+    lifespan=lifespan,
 )
 
 
@@ -50,14 +73,6 @@ app.include_router(
     prefix="/messages",
     tags=["Messages"],
 )
-
-#
-#app.include_router(
-#    profiles.router,
-#    prefix="/profiles",
-#    tags=["Profiles"],
-#)
-
 
 app.include_router(
     websocket.router,

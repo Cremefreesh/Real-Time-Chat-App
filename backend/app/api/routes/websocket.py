@@ -1,4 +1,5 @@
 import json
+
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.orm import Session
 
@@ -7,17 +8,43 @@ from app.core.security import verify_token
 from app.models.user import User
 from app.models.message import Message
 from app.utils.embedding_service import generate_embedding
-#care changed app.utils from app.services.embedding_service
-
 from app.services.moderation_service import moderate_message
-from app.utils.embedding_service import generate_embedding
+from app.services.redis_service import publish_message
+
 
 router = APIRouter()
 
+# Connections held by THIS FastAPI process only.
 rooms = {}
 
+
+async def broadcast_local(room_id: int, outgoing: dict):
+    connections = rooms.get(room_id, [])
+
+    dead_connections = []
+
+    for connection in connections:
+        try:
+            await connection.send_text(
+                json.dumps(outgoing)
+            )
+        except Exception:
+            dead_connections.append(connection)
+
+    for connection in dead_connections:
+        if connection in connections:
+            connections.remove(connection)
+
+    if not connections and room_id in rooms:
+        del rooms[room_id]
+
+
 @router.websocket("/ws/rooms/{room_id}")
-async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(...)):
+async def websocket_room(
+    websocket: WebSocket,
+    room_id: int,
+    token: str = Query(...),
+):
     payload = verify_token(token)
 
     if payload is None:
@@ -25,7 +52,6 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
         return
 
     db: Session = SessionLocal()
-
 
     subject = payload.get("sub")
 
@@ -40,10 +66,11 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
         db.close()
         return
 
-    user = db.query(User).filter(
-        User.id == user_id
-    ).first()
-
+    user = (
+        db.query(User)
+        .filter(User.id == user_id)
+        .first()
+    )
 
     if user is None:
         await websocket.close()
@@ -62,23 +89,30 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
             data = await websocket.receive_text()
             data = json.loads(data)
 
-            moderation = moderate_message(data["content"])
+            moderation = moderate_message(
+                data["content"]
+            )
 
             if not moderation["allowed"]:
-                await websocket.send_text(json.dumps({
-                    "type": "moderation_warning",
-                    "message": "Your message was blocked by moderation.",
-                    "reason": moderation["reason"],
-                    "flagged_words": moderation["flagged_words"],
-                }))
+                await websocket.send_text(
+                    json.dumps({
+                        "type": "moderation_warning",
+                        "message": (
+                            "Your message was blocked by moderation."
+                        ),
+                        "reason": moderation["reason"],
+                        "flagged_words": moderation["flagged_words"],
+                    })
+                )
                 continue
-
 
             message = Message(
                 content=data["content"],
                 user_id=user.id,
                 room_id=room_id,
-                embedding=generate_embedding(data["content"]),
+                embedding=generate_embedding(
+                    data["content"]
+                ),
             )
 
             db.add(message)
@@ -99,10 +133,29 @@ async def websocket_room(websocket: WebSocket, room_id: int, token: str = Query(
                 ),
             }
 
-            for connection in rooms[room_id]:
-                await connection.send_text(json.dumps(outgoing))
+            # OLD:
+            #
+            # for connection in rooms[room_id]:
+            #     await connection.send_text(
+            #         json.dumps(outgoing)
+            #     )
+
+            # NEW:
+            await publish_message(
+                room_id,
+                outgoing,
+            )
 
     except WebSocketDisconnect:
-        rooms[room_id].remove(websocket)
+        if (
+            room_id in rooms
+            and websocket in rooms[room_id]
+        ):
+            rooms[room_id].remove(websocket)
+
+            if not rooms[room_id]:
+                del rooms[room_id]
+
     finally:
         db.close()
+        
