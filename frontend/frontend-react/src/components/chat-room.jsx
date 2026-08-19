@@ -126,9 +126,12 @@ export function ChatRoom({
       return;
     }
 
+    const clientMessageId = crypto.randomUUID();
+
     socket.send(
       JSON.stringify({
-        content,
+        client_message_id: clientMessageId,
+        content: message,
       })
     );
 
