@@ -7,8 +7,9 @@ from app.core.database import SessionLocal
 from app.core.security import verify_token
 from app.models.user import User
 from app.models.message import Message
-
-from app.utils.embedding_service import generate_embedding
+from app.tasks.message_tasks import (
+    generate_message_embedding,
+)
 from app.services.moderation_service import moderate_message
 from app.services.redis_service import (
     publish_message,
@@ -247,12 +248,16 @@ async def websocket_room(
                     content=content,
                     user_id=user.id,
                     room_id=room_id,
-                    embedding=generate_embedding(content),
+                    embedding=None,
                 )
 
                 db.add(message)
                 db.commit()
                 db.refresh(message)
+
+                generate_message_embedding.delay(
+                    message.id
+                )
 
             except Exception as exc:
 
